@@ -1,0 +1,11 @@
+server:
+  port: 3001
+# 数据库配置
+datasource:
+  driverName: mysql
+  host: localhost
+  port: '3306'
+  database: go_bill_record
+  username: root
+  password: lmjzhlgr
+  charset: utf8
