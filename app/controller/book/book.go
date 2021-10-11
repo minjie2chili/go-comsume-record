@@ -3,7 +3,7 @@ package book
 import (
 	"github.com/gin-gonic/gin"
 	. "money-record/app/database"
-	Book "money-record/app/model/book"
+	. "money-record/app/model/book"
 	"fmt"
 )
 
@@ -34,14 +34,14 @@ func getAllBook(c *gin.Context) {
 	});
 }
 
-func getRows() (book []Book.BookModel)  {
+func getRows() (book []Book)  {
 	DB.Table("book").Find(&book)
 	return;
 }
 
 // 新增账簿
 func addBook(c *gin.Context) {
-	var b Book.BookModel;
+	var b Book;
 	err := c.Bind(&b)
 	if err != nil {
 		gormResponse.Message = "参数错误"
@@ -67,7 +67,7 @@ func addBook(c *gin.Context) {
 
 // 删除账簿
 func deleteBook(c *gin.Context) {
-	var b Book.BookModel;
+	var b Book;
 	err := c.Bind(&b)
 	if err != nil {
 		gormResponse.Message = "参数错误"
@@ -83,7 +83,7 @@ func deleteBook(c *gin.Context) {
 
 // 更新账簿
 func updateBook(c *gin.Context) {
-	var b Book.BookModel;
+	var b Book;
 	err := c.Bind(&b)
 	if err != nil {
 		gormResponse.Message = "参数错误"

@@ -18,10 +18,10 @@ SET NAMES utf8mb4;
 SET FOREIGN_KEY_CHECKS = 0;
 
 -- ----------------------------
--- Table structure for amount
+-- Table structure for record
 -- ----------------------------
-DROP TABLE IF EXISTS `amount`;
-CREATE TABLE `amount` (
+DROP TABLE IF EXISTS `record`;
+CREATE TABLE `record` (
   `time` varchar(30) DEFAULT NULL,
   `type` int(10) DEFAULT NULL,
   `money` float(10,2) DEFAULT NULL,

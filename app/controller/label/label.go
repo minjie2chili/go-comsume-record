@@ -3,6 +3,7 @@ package label
 import (
 	"github.com/gin-gonic/gin"
 	. "money-record/app/database"
+	. "money-record/app/model/label"
 	"fmt"
 )
 
@@ -11,11 +12,6 @@ func LabelRouter(router *gin.RouterGroup) {
 	router.POST("/add", addLabel)
 	router.POST("/delete", deleteLabel)
 	router.POST("/update", updateLabel)
-}
-
-type Label struct {
-	Id      int     `gorm:"primary_key" json:"id"`
-	Name    string  `json:"name"`
 }
 
 //应答体

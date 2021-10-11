@@ -2,12 +2,184 @@ package record
 
 import (
 	"github.com/gin-gonic/gin"
+	. "money-record/app/database"
+	. "money-record/app/model/record"
+	"strconv"
+	"fmt"
 )
 
 func RecordRouter(router *gin.RouterGroup) {
-	router.GET("/", Record)
+	router.GET("/list", getAllRecord)
+	router.GET("/pie/list", getPieRecord)
+	router.GET("/bar/list", getBarRecord)
+	router.POST("/add", addRecord)
+	router.POST("/delete", deleteRecord)
+	router.POST("/update", updateRecord)
 }
 
-func Record(c *gin.Context) {
-	c.JSON(200, 32);
+//应答体
+type GormResponse struct {
+	Code    string         `json:"code"`
+	Message string      `json:"msg"`
+	Data    interface{} `json:"data"`
+}
+
+var gormResponse GormResponse
+
+
+func getAllRecord(c *gin.Context) {
+	rs := getRows(c)
+	var msg RecordListRes;
+	msg.Data = rs
+	fmt.Println(msg)
+	c.JSON(200, gin.H{
+		"code": "Y",
+		"result": msg,
+	});
+}
+
+func getPieRecord(c *gin.Context) {
+	rs := getPieRows(c)
+	var msg RecordListRes;
+	msg.Data = rs
+	fmt.Println(msg)
+	c.JSON(200, gin.H{
+		"code": "Y",
+		"result": msg,
+	});
+}
+
+func getPieRows(c *gin.Context) (record []Record)  {
+	// var b RecordQueryParams;
+	// c.Bind(&b)
+	// // 条件查询
+	// Type, typeExist := c.GetQuery("type")
+	// startTime, startTimeExist := c.GetQuery("startTime")
+	// endTime, endTimeExist := c.GetQuery("endTime")
+	return
+}
+
+func getBarRecord(c *gin.Context) {
+	rs := getBarRows(c)
+	var msg RecordListRes;
+	msg.Data = rs
+	fmt.Println(msg)
+	c.JSON(200, gin.H{
+		"code": "Y",
+		"result": msg,
+	});
+}
+
+func getBarRows(c *gin.Context) (record []Record)  {
+	DB.Table("record").Select("DATE_FORMAT(time,'%Y') as year ,SUM(money) as total").Group("year").Find(&record)
+	return
+}
+
+type RecordListRes struct {
+	Data []Record `json:"data"`
+}
+
+func getRows(c *gin.Context) (record []Record)  {
+	var b RecordQueryParams;
+	c.Bind(&b)
+	// 条件查询
+	bookId := c.Query("bookId")
+	// GetQuery返回两个参数，第一个是参数值，第二个参数是参数是否存在的bool值，可以用来判断参数是否存在
+	Type, typeExist := c.GetQuery("type")
+	label, labelExist := c.GetQuery("label")
+	startTime, startTimeExist := c.GetQuery("startTime")
+	endTime, endTimeExist := c.GetQuery("endTime")
+	money := c.Query("money")
+	time := c.Query("time")
+	// 分页参数
+	page,_ := strconv.Atoi(c.DefaultQuery("page", "0"))
+	pageSize,_ := strconv.Atoi(c.Query("pageSize"))
+	offset := (page - 1) * pageSize
+	
+	tx := DB.Table("record").Joins("join label on record.label = label.id and label.bookId = ?", bookId).Offset(offset).Limit(pageSize)
+
+	if typeExist {
+		tx = tx.Where("record.type = ?", Type)
+	}
+	if labelExist {
+		tx = tx.Where("record.label = ?", label)
+	}
+	if startTimeExist && endTimeExist {
+		tx = tx.Where("record.time between ? and ?", startTime, endTime)
+	}
+	// 处理金额升降序
+	if money == "ascend" {
+		tx = tx.Order("money")
+	} else if money == "descend" {
+		
+		tx = tx.Order("money desc")
+	}
+	// 处理type升降序
+	if time == "ascend" {
+		tx = tx.Order("time")
+	} else {
+		tx = tx.Order("time desc")
+	}
+	tx.Find(&record)
+	if tx != nil {
+		fmt.Println(tx)
+	}
+	return;
+}
+
+// 新增记录
+func addRecord(c *gin.Context) {
+	var b Record;
+	err := c.Bind(&b)
+	if err != nil {
+		gormResponse.Message = "参数错误"
+		gormResponse.Data = err
+		c.JSON(200, gormResponse)
+		return
+	}
+	
+	tx := DB.Create(&b)
+	if tx.RowsAffected > 0 {
+		gormResponse.Code = "Y"
+		gormResponse.Message = "写入成功"
+		gormResponse.Data = "OK"
+		c.JSON(200, gormResponse)
+		return
+	}
+	//返回页面
+	c.JSON(200, gin.H{
+		"code": "N",
+	})
+}
+
+// 删除记录
+func deleteRecord(c *gin.Context) {
+	var b Record;
+	err := c.Bind(&b)
+	if err != nil {
+		gormResponse.Message = "参数错误"
+		gormResponse.Data = err
+		c.JSON(200, gormResponse)
+		return
+	}
+	DB.Delete(&b)
+	c.JSON(200, gin.H{
+		"code": "Y",
+	});
+}
+
+// 更新记录
+func updateRecord(c *gin.Context) {
+	var b Record;
+	err := c.Bind(&b)
+	if err != nil {
+		gormResponse.Message = "参数错误"
+		gormResponse.Data = err
+		c.JSON(200, gormResponse)
+		return
+	}
+	DB.Model(&b).Updates(&b)
+	c.JSON(200, gin.H{
+		"code": "Y",
+	});
 }
