@@ -20,3 +20,13 @@ type RecordQueryParams struct {
   money string
   bookId int
 }
+
+type RecordBarList struct {
+	Year int `json:"year"`
+	Total float32 `json:"total"`
+}
+
+type RecordBarData struct {
+	Income []RecordBarList `json:"income"`
+	Pay []RecordBarList `json:"pay"`
+}

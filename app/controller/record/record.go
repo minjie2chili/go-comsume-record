@@ -59,19 +59,24 @@ func getPieRows(c *gin.Context) (record []Record)  {
 	return
 }
 
+type RecordBarRes struct {
+	Data RecordBarData `json:"data"`
+}
+
 func getBarRecord(c *gin.Context) {
 	rs := getBarRows(c)
-	var msg RecordListRes;
+	var msg RecordBarRes;
 	msg.Data = rs
-	fmt.Println(msg)
 	c.JSON(200, gin.H{
 		"code": "Y",
 		"result": msg,
 	});
 }
 
-func getBarRows(c *gin.Context) (record []Record)  {
-	DB.Table("record").Select("DATE_FORMAT(time,'%Y') as year ,SUM(money) as total").Group("year").Find(&record)
+func getBarRows(c *gin.Context) (record RecordBarData)  {
+	// 通过Scan方法把sql返回的数据放入我们的结构体中
+	DB.Table("record").Raw("SELECT DATE_FORMAT(time,'%Y') year ,SUM(money) total from record where type = 1 group by year").Scan(&record.Income)
+	DB.Table("record").Raw("SELECT DATE_FORMAT(time,'%Y') year ,SUM(money) total from record where type = 2 group by year").Scan(&record.Pay)
 	return
 }
 
