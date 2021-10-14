@@ -38,9 +38,13 @@ func getAllRecord(c *gin.Context) {
 	});
 }
 
+type RecordPieRes struct {
+	Data []RecordPieList `json:"data"`
+}
+
 func getPieRecord(c *gin.Context) {
 	rs := getPieRows(c)
-	var msg RecordListRes;
+	var msg RecordPieRes;
 	msg.Data = rs
 	fmt.Println(msg)
 	c.JSON(200, gin.H{
@@ -49,13 +53,15 @@ func getPieRecord(c *gin.Context) {
 	});
 }
 
-func getPieRows(c *gin.Context) (record []Record)  {
+func getPieRows(c *gin.Context) (record []RecordPieList)  {
 	// var b RecordQueryParams;
 	// c.Bind(&b)
 	// // 条件查询
 	// Type, typeExist := c.GetQuery("type")
 	// startTime, startTimeExist := c.GetQuery("startTime")
 	// endTime, endTimeExist := c.GetQuery("endTime")
+	tx := DB.Table("record").Raw("select name, sum(money) as total from (select * from label where type = 1) a join record on record.label_id = a.id and record.type = 1 group by record.label_id;").Scan(&record)
+	fmt.Println(221, tx)
 	return
 }
 
@@ -80,11 +86,7 @@ func getBarRows(c *gin.Context) (record RecordBarData)  {
 	return
 }
 
-type RecordListRes struct {
-	Data []Record `json:"data"`
-}
-
-func getRows(c *gin.Context) (record []Record)  {
+func getRows(c *gin.Context) (record []RecordListItemRes)  {
 	var b RecordQueryParams;
 	c.Bind(&b)
 	// 条件查询
@@ -101,13 +103,13 @@ func getRows(c *gin.Context) (record []Record)  {
 	pageSize,_ := strconv.Atoi(c.Query("pageSize"))
 	offset := (page - 1) * pageSize
 	
-	tx := DB.Table("record").Joins("join label on record.label = label.id and label.bookId = ?", bookId).Offset(offset).Limit(pageSize)
+	tx := DB.Table("record").Select("record.*, label.name").Joins("join label on record.label_id = label.id and label.book_id = ?", bookId).Offset(offset).Limit(pageSize)
 
 	if typeExist {
 		tx = tx.Where("record.type = ?", Type)
 	}
 	if labelExist {
-		tx = tx.Where("record.label = ?", label)
+		tx = tx.Where("record.label_id = ?", label)
 	}
 	if startTimeExist && endTimeExist {
 		tx = tx.Where("record.time between ? and ?", startTime, endTime)
@@ -125,6 +127,7 @@ func getRows(c *gin.Context) (record []Record)  {
 	} else {
 		tx = tx.Order("time desc")
 	}
+	fmt.Println(tx)
 	tx.Find(&record)
 	if tx != nil {
 		fmt.Println(tx)
@@ -136,6 +139,7 @@ func getRows(c *gin.Context) (record []Record)  {
 func addRecord(c *gin.Context) {
 	var b Record;
 	err := c.Bind(&b)
+	
 	if err != nil {
 		gormResponse.Message = "参数错误"
 		gormResponse.Data = err
@@ -144,6 +148,7 @@ func addRecord(c *gin.Context) {
 	}
 	
 	tx := DB.Create(&b)
+	fmt.Println(221, tx)
 	if tx.RowsAffected > 0 {
 		gormResponse.Code = "Y"
 		gormResponse.Message = "写入成功"
@@ -183,8 +188,16 @@ func updateRecord(c *gin.Context) {
 		c.JSON(200, gormResponse)
 		return
 	}
-	DB.Model(&b).Updates(&b)
+	tx := DB.Model(&b).Updates(&b)
+	if tx.RowsAffected > 0 {
+		gormResponse.Code = "Y"
+		gormResponse.Message = "写入成功"
+		gormResponse.Data = "OK"
+		c.JSON(200, gormResponse)
+		return
+	}
 	c.JSON(200, gin.H{
 		"code": "Y",
+		"msg": tx,
 	});
 }

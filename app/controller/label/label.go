@@ -25,15 +25,15 @@ var gormResponse GormResponse
 
 
 func getAllLabel(c *gin.Context) {
-	rs := getRows()
+	rs := getRows(c)
 	c.JSON(200, gin.H{
 		"code": "Y",
 		"result": rs,
 	});
 }
 
-func getRows() (label []Label)  {
-	DB.Table("label").Find(&label)
+func getRows(c *gin.Context) (label []Label)  {
+	DB.Table("label").Where("book_id = ? and type = ?", c.Query("bookId"), c.Query("type")).Find(&label)
 	return;
 }
 
