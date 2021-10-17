@@ -31,25 +31,17 @@ func getAllRecord(c *gin.Context) {
 	rs := getRows(c)
 	var msg RecordListRes;
 	msg.Data = rs
-	fmt.Println(msg)
 	c.JSON(200, gin.H{
 		"code": "Y",
 		"result": msg,
 	});
 }
 
-type RecordPieRes struct {
-	Data []RecordPieList `json:"data"`
-}
-
 func getPieRecord(c *gin.Context) {
 	rs := getPieRows(c)
-	var msg RecordPieRes;
-	msg.Data = rs
-	fmt.Println(msg)
 	c.JSON(200, gin.H{
 		"code": "Y",
-		"result": msg,
+		"result": rs,
 	});
 }
 
@@ -60,26 +52,20 @@ func getPieRows(c *gin.Context) (record []RecordPieList)  {
 	// Type, typeExist := c.GetQuery("type")
 	// startTime, startTimeExist := c.GetQuery("startTime")
 	// endTime, endTimeExist := c.GetQuery("endTime")
-	tx := DB.Table("record").Raw("select name, sum(money) as total from (select * from label where type = 1) a join record on record.label_id = a.id and record.type = 1 group by record.label_id;").Scan(&record)
-	fmt.Println(221, tx)
+	DB.Table("record").Raw("select name, sum(money) as total from (select * from label where type = 1) a join record on record.label_id = a.id and record.type = 1 group by record.label_id;").Scan(&record)
 	return
-}
-
-type RecordBarRes struct {
-	Data RecordBarData `json:"data"`
 }
 
 func getBarRecord(c *gin.Context) {
 	rs := getBarRows(c)
-	var msg RecordBarRes;
-	msg.Data = rs
 	c.JSON(200, gin.H{
 		"code": "Y",
-		"result": msg,
+		"result": rs,
 	});
 }
 
 func getBarRows(c *gin.Context) (record RecordBarData)  {
+	record.Pay = make([]RecordBarList, 0)
 	// 通过Scan方法把sql返回的数据放入我们的结构体中
 	DB.Table("record").Raw("SELECT DATE_FORMAT(time,'%Y') year ,SUM(money) total from record where type = 1 group by year").Scan(&record.Income)
 	DB.Table("record").Raw("SELECT DATE_FORMAT(time,'%Y') year ,SUM(money) total from record where type = 2 group by year").Scan(&record.Pay)
@@ -127,7 +113,6 @@ func getRows(c *gin.Context) (record []RecordListItemRes)  {
 	} else {
 		tx = tx.Order("time desc")
 	}
-	fmt.Println(tx)
 	tx.Find(&record)
 	if tx != nil {
 		fmt.Println(tx)
@@ -148,7 +133,6 @@ func addRecord(c *gin.Context) {
 	}
 	
 	tx := DB.Create(&b)
-	fmt.Println(221, tx)
 	if tx.RowsAffected > 0 {
 		gormResponse.Code = "Y"
 		gormResponse.Message = "写入成功"
