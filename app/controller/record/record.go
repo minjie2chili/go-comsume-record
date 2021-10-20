@@ -4,6 +4,7 @@ import (
 	"github.com/gin-gonic/gin"
 	. "money-record/app/database"
 	. "money-record/app/model/record"
+	"gorm.io/gorm"
 	"strconv"
 	"fmt"
 )
@@ -26,57 +27,8 @@ type GormResponse struct {
 
 var gormResponse GormResponse
 
-
-func getAllRecord(c *gin.Context) {
-	rs := getRows(c)
-	var msg RecordListRes;
-	msg.Data = rs
-	c.JSON(200, gin.H{
-		"code": "Y",
-		"result": msg,
-	});
-}
-
-func getPieRecord(c *gin.Context) {
-	rs := getPieRows(c)
-	c.JSON(200, gin.H{
-		"code": "Y",
-		"result": rs,
-	});
-}
-
-func getPieRows(c *gin.Context) (record []RecordPieList)  {
-	// var b RecordQueryParams;
-	// c.Bind(&b)
-	// // 条件查询
-	// Type, typeExist := c.GetQuery("type")
-	// startTime, startTimeExist := c.GetQuery("startTime")
-	// endTime, endTimeExist := c.GetQuery("endTime")
-	DB.Table("record").Raw("select name, sum(money) as total from (select * from label where type = 1) a join record on record.label_id = a.id and record.type = 1 group by record.label_id;").Scan(&record)
-	return
-}
-
-func getBarRecord(c *gin.Context) {
-	rs := getBarRows(c)
-	c.JSON(200, gin.H{
-		"code": "Y",
-		"result": rs,
-	});
-}
-
-func getBarRows(c *gin.Context) (record RecordBarData)  {
-	record.Pay = make([]RecordBarList, 0)
-	// 通过Scan方法把sql返回的数据放入我们的结构体中
-	DB.Table("record").Raw("SELECT DATE_FORMAT(time,'%Y') year ,SUM(money) total from record where type = 1 group by year").Scan(&record.Income)
-	DB.Table("record").Raw("SELECT DATE_FORMAT(time,'%Y') year ,SUM(money) total from record where type = 2 group by year").Scan(&record.Pay)
-	return
-}
-
-func getRows(c *gin.Context) (record []RecordListItemRes)  {
-	var b RecordQueryParams;
-	c.Bind(&b)
-	// 条件查询
-	bookId := c.Query("bookId")
+func getResultByCondition(c *gin.Context, tx1 *gorm.DB)(db *gorm.DB) {
+	tx := tx1
 	// GetQuery返回两个参数，第一个是参数值，第二个参数是参数是否存在的bool值，可以用来判断参数是否存在
 	Type, typeExist := c.GetQuery("type")
 	label, labelExist := c.GetQuery("label")
@@ -84,12 +36,6 @@ func getRows(c *gin.Context) (record []RecordListItemRes)  {
 	endTime, endTimeExist := c.GetQuery("endTime")
 	money := c.Query("money")
 	time := c.Query("time")
-	// 分页参数
-	page,_ := strconv.Atoi(c.DefaultQuery("page", "0"))
-	pageSize,_ := strconv.Atoi(c.Query("pageSize"))
-	offset := (page - 1) * pageSize
-	
-	tx := DB.Table("record").Select("record.*, label.name").Joins("join label on record.label_id = label.id and label.book_id = ?", bookId).Offset(offset).Limit(pageSize)
 
 	if typeExist {
 		tx = tx.Where("record.type = ?", Type)
@@ -113,11 +59,84 @@ func getRows(c *gin.Context) (record []RecordListItemRes)  {
 	} else {
 		tx = tx.Order("time desc")
 	}
-	tx.Find(&record)
-	if tx != nil {
-		fmt.Println(tx)
+	return tx
+}
+
+func getAllRecord(c *gin.Context) {
+	rs, total := getRows(c)
+	var msg RecordListRes;
+	msg.Data = rs
+	msg.Total = total.Total
+	msg.TotalAmount = total.TotalAmount
+
+	c.JSON(200, gin.H{
+		"code": "Y",
+		"result": msg,
+	});
+}
+
+func getPieRecord(c *gin.Context) {
+	rs := getPieRows(c)
+	c.JSON(200, gin.H{
+		"code": "Y",
+		"result": rs,
+	});
+}
+
+func getPieRows(c *gin.Context) (record []RecordPieList)  {
+	// var b RecordQueryParams;
+	// c.Bind(&b)
+	// // 条件查询
+	Type := c.Query("type")
+	startTime, startTimeExist := c.GetQuery("startTime")
+	endTime, endTimeExist := c.GetQuery("endTime")
+	var s1 string;
+	if startTimeExist && endTimeExist {
+		s1 = "and record.time between '" + startTime + "' and '" + endTime + "'";
 	}
-	return;
+	tx := DB.Table("record").Raw("select name, sum(money) as total from (select * from label where type = ?) a join record on record.label_id = a.id and record.type = ? "+ s1 +" group by record.label_id", Type, Type)
+	tx.Scan(&record)
+	return
+}
+
+func getBarRecord(c *gin.Context) {
+	rs := getBarRows(c)
+	c.JSON(200, gin.H{
+		"code": "Y",
+		"result": rs,
+	});
+}
+
+func getBarRows(c *gin.Context) (record RecordBarData)  {
+	record.Pay = make([]RecordBarList, 0)
+	// 通过Scan方法把sql返回的数据放入我们的结构体中
+	DB.Table("record").Raw("SELECT DATE_FORMAT(time,'%Y') year ,SUM(money) total from record where type = 1 group by year").Scan(&record.Income)
+	DB.Table("record").Raw("SELECT DATE_FORMAT(time,'%Y') year ,SUM(money) total from record where type = 2 group by year").Scan(&record.Pay)
+	return
+}
+
+func getRows(c *gin.Context)(res []RecordListItemRes, total TotalRes)  {
+	var b RecordQueryParams;
+	c.Bind(&b)
+	// 条件查询
+	bookId := c.Query("bookId")
+	// 分页参数
+	page,_ := strconv.Atoi(c.DefaultQuery("page", "0"))
+	pageSize,_ := strconv.Atoi(c.Query("pageSize"))
+	offset := (page - 1) * pageSize
+	
+	tx := DB.Table("record").Select("record.*, label.name").Joins("join label on record.label_id = label.id and label.book_id = ?", bookId).Offset(offset).Limit(pageSize)
+	tx2 := DB.Table("record").Select("count(*) as total, SUM(money) as TotalAmount").Joins("join label on record.label_id = label.id and label.book_id = ?", bookId)
+	fmt.Println(333, tx2)
+	tx = getResultByCondition(c, tx)
+	tx2 = getResultByCondition(c, tx2)
+	tx.Find(&res)
+	tx2.Scan(&total)
+	fmt.Println(222, total)
+	if tx != nil {
+		fmt.Println(222, tx2)
+	}
+	return res, total;
 }
 
 // 新增记录

@@ -31,7 +31,13 @@ type RecordListItemRes struct {
 	Remark    string  `json:"remark"`
 }
 
+type TotalRes struct {
+	Total int `json:"total"`
+	TotalAmount float32 `json:"totalAmount"`
+}
+
 type RecordListRes struct {
+	TotalRes
 	Data []RecordListItemRes `json:"data"`
 }
 
@@ -46,6 +52,6 @@ type RecordBarData struct {
 }
 
 type RecordPieList struct {
-	Total float32 `json:"total"`
+	Total float32 `json:"totalAmount"`
 	Name		string 		`json:"labelName"`
 }
