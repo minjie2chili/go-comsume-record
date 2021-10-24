@@ -1,10 +1,11 @@
 package book
 
 import (
-	"github.com/gin-gonic/gin"
 	. "money-record/app/database"
 	. "money-record/app/model/book"
-	"fmt"
+	"money-record/app/util"
+
+	"github.com/gin-gonic/gin"
 )
 
 func BookRouter(router *gin.RouterGroup) {
@@ -14,85 +15,73 @@ func BookRouter(router *gin.RouterGroup) {
 	router.POST("/update", updateBook)
 }
 
-
-
-//应答体
-type GormResponse struct {
-	Code    string         `json:"code"`
-	Message string      `json:"msg"`
-	Data    interface{} `json:"data"`
-}
-
-var gormResponse GormResponse
-
+// -------------- 账簿列表 --------------
 
 func getAllBook(c *gin.Context) {
+	utilGin := util.Gin{
+		Ctx: c,
+	}
+	var res BookList
 	rs := getRows()
-	c.JSON(200, gin.H{
-		"code": "Y",
-		"result": rs,
-	});
+	res.List = rs
+	utilGin.Response("Y", "success", res)
 }
 
-func getRows() (book []Book)  {
+func getRows() (book []Book) {
 	DB.Table("book").Find(&book)
-	return;
+	return
 }
 
-// 新增账簿
+// -------------- 新增账簿 --------------
+
 func addBook(c *gin.Context) {
-	var b Book;
+	utilGin := util.Gin{
+		Ctx: c,
+	}
+	var b Book
 	err := c.Bind(&b)
 	if err != nil {
-		gormResponse.Message = "参数错误"
-		gormResponse.Data = err
-		c.JSON(200, gormResponse)
+		utilGin.Response("N", "error", err)
 		return
 	}
-	
-	tx := DB.Create(&b)
-	fmt.Print(221, b, tx);
-	if tx.RowsAffected > 0 {
-		gormResponse.Code = "Y"
-		gormResponse.Message = "写入成功"
-		gormResponse.Data = "OK"
-		c.JSON(200, gormResponse)
+
+	res := DB.Create(&b)
+
+	if res.RowsAffected > 0 {
+		utilGin.Response("Y", "success", nil)
 		return
 	}
-	//返回页面
-	c.JSON(200, gin.H{
-		"code": "N",
-	})
+	utilGin.Response("N", "error", nil)
 }
 
-// 删除账簿
+// -------------- 删除账簿 --------------
+
 func deleteBook(c *gin.Context) {
-	var b Book;
+	utilGin := util.Gin{
+		Ctx: c,
+	}
+	var b Book
 	err := c.Bind(&b)
 	if err != nil {
-		gormResponse.Message = "参数错误"
-		gormResponse.Data = err
-		c.JSON(200, gormResponse)
+		utilGin.Response("N", "error", err)
 		return
 	}
 	DB.Delete(&b)
-	c.JSON(200, gin.H{
-		"code": "Y",
-	});
+	utilGin.Response("Y", "success", nil)
 }
 
-// 更新账簿
+// -------------- 更新账簿 --------------
+
 func updateBook(c *gin.Context) {
-	var b Book;
+	utilGin := util.Gin{
+		Ctx: c,
+	}
+	var b Book
 	err := c.Bind(&b)
 	if err != nil {
-		gormResponse.Message = "参数错误"
-		gormResponse.Data = err
-		c.JSON(200, gormResponse)
+		utilGin.Response("N", "error", err)
 		return
 	}
 	DB.Model(&b).Update("name", b.Name)
-	c.JSON(200, gin.H{
-		"code": "Y",
-	});
+	utilGin.Response("Y", "success", nil)
 }

@@ -1,10 +1,11 @@
 package label
 
 import (
-	"github.com/gin-gonic/gin"
 	. "money-record/app/database"
 	. "money-record/app/model/label"
-	"fmt"
+	"money-record/app/util"
+
+	"github.com/gin-gonic/gin"
 )
 
 func LabelRouter(router *gin.RouterGroup) {
@@ -14,83 +15,73 @@ func LabelRouter(router *gin.RouterGroup) {
 	router.POST("/update", updateLabel)
 }
 
-//应答体
-type GormResponse struct {
-	Code    string         `json:"code"`
-	Message string      `json:"msg"`
-	Data    interface{} `json:"data"`
-}
-
-var gormResponse GormResponse
-
+// -------------- 标签列表 --------------
 
 func getAllLabel(c *gin.Context) {
+	utilGin := util.Gin{
+		Ctx: c,
+	}
+	var msg LabelList
 	rs := getRows(c)
-	c.JSON(200, gin.H{
-		"code": "Y",
-		"result": rs,
-	});
+	msg.List = rs
+	utilGin.Response("Y", "success", msg)
 }
 
-func getRows(c *gin.Context) (label []Label)  {
+func getRows(c *gin.Context) (label []Label) {
 	DB.Table("label").Where("book_id = ? and type = ?", c.Query("bookId"), c.Query("type")).Find(&label)
-	return;
+	return
 }
 
-// 新增标签
+// -------------- 新增标签 --------------
+
 func addLabel(c *gin.Context) {
-	var b Label;
+	utilGin := util.Gin{
+		Ctx: c,
+	}
+	var b Label
 	err := c.Bind(&b)
 	if err != nil {
-		gormResponse.Message = "参数错误"
-		gormResponse.Data = err
-		c.JSON(200, gormResponse)
+		utilGin.Response("N", "error", err)
 		return
 	}
-	
-	tx := DB.Create(&b)
-	fmt.Print(221, b, tx);
-	if tx.RowsAffected > 0 {
-		gormResponse.Code = "Y"
-		gormResponse.Message = "写入成功"
-		gormResponse.Data = "OK"
-		c.JSON(200, gormResponse)
+
+	res := DB.Create(&b)
+
+	if res.RowsAffected > 0 {
+		utilGin.Response("Y", "success", nil)
 		return
 	}
-	//返回页面
-	c.JSON(200, gin.H{
-		"code": "N",
-	})
+	utilGin.Response("N", "error", err)
 }
 
-// 删除标签
+// -------------- 删除标签 --------------
+
 func deleteLabel(c *gin.Context) {
-	var b Label;
+	utilGin := util.Gin{
+		Ctx: c,
+	}
+	var b Label
 	err := c.Bind(&b)
 	if err != nil {
-		gormResponse.Message = "参数错误"
-		gormResponse.Data = err
-		c.JSON(200, gormResponse)
+		utilGin.Response("N", "error", err)
 		return
 	}
 	DB.Delete(&b)
-	c.JSON(200, gin.H{
-		"code": "Y",
-	});
+	utilGin.Response("Y", "success", nil)
 }
 
-// 更新标签
+// -------------- 更新标签 --------------
+
 func updateLabel(c *gin.Context) {
-	var b Label;
+	utilGin := util.Gin{
+		Ctx: c,
+	}
+	var b Label
 	err := c.Bind(&b)
 	if err != nil {
-		gormResponse.Message = "参数错误"
-		gormResponse.Data = err
-		c.JSON(200, gormResponse)
+		utilGin.Response("N", "error", err)
 		return
 	}
 	DB.Model(&b).Update("name", b.Name)
-	c.JSON(200, gin.H{
-		"code": "Y",
-	});
+	utilGin.Response("Y", "success", nil)
 }
