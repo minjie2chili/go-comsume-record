@@ -24,7 +24,7 @@ type RecordQueryParams struct {
 // TODO: 结构体继承和重写
 type RecordListItemRes struct {
 	Id     int     `gorm:"primary_key" json:"id"`
-	Name   string  `json:"labelName"`
+	Name   string  `json:"label"`
 	Type   int     `json:"type"`
 	Time   string  `json:"time"`
 	Money  float32 `json:"money"`

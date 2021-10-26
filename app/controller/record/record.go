@@ -99,9 +99,7 @@ func getBarRecord(c *gin.Context) {
 		Ctx: c,
 	}
 	rs := getBarRows(c)
-	var res RecordBarRes
-	res.List = rs
-	utilGin.Response("Y", "success", res)
+	utilGin.Response("Y", "success", rs)
 }
 
 func getBarRows(c *gin.Context) (record RecordBarData) {
